@@ -62,8 +62,17 @@
 
 ## Step 1: Start Infrastructure
 
+### Option A: Using Helm (recommended)
+
 ```bash
-# Create k3d cluster + deploy Redis, PostgreSQL, Debezium Server
+make helm-setup-debezium-redis-sink
+```
+
+This creates the k3d cluster, builds the custom PostgreSQL image, and runs `helm install` with `values-debezium-redis-sink.yaml` — deploying Redis, PostgreSQL, and Debezium Server in one shot.
+
+### Option B: Using kubectl (raw manifests)
+
+```bash
 make setup-debezium-redis-sink
 ```
 
@@ -103,6 +112,10 @@ kubectl logs deploy/debezium-server --tail=20
 In a **separate terminal**:
 
 ```bash
+# If using Helm (service names: cdc-demo-postgres, cdc-demo-redis)
+make helm-port-forward-all
+
+# If using kubectl (service names: postgres-svc, redis-svc)
 make port-forward-all
 ```
 
@@ -441,6 +454,9 @@ make port-forward-all
 # Stop port-forwards
 make port-forward-stop
 
-# Delete everything
+# Delete everything (kubectl)
 make teardown
+
+# Delete everything (Helm)
+make helm-teardown
 ```

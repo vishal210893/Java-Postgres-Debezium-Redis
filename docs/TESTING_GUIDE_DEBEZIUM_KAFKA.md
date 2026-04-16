@@ -78,15 +78,23 @@
 
 ## Step 1: Start Infrastructure
 
-Single command sets up everything:
+### Option A: Using Helm (recommended)
+
+```bash
+make helm-setup-debezium-kafka
+```
+
+This creates the k3d cluster, builds the custom PostgreSQL image, and runs `helm install` with `values-debezium-kafka.yaml` — deploying Redis, PostgreSQL, Kafka, and Debezium Connect in one shot. The connector is automatically registered via a Helm post-install Job.
+
+### Option B: Using kubectl (raw manifests)
 
 ```bash
 make setup-debezium-kafka
 ```
 
-This creates the k3d cluster and deploys Redis, PostgreSQL, Kafka, and Debezium Kafka Connect in one shot. The `debezium-kafka-install` step also **automatically registers the PostgreSQL connector** by POSTing `k8s/kafka/debezium-connect/register-connector.json` to the Kafka Connect REST API — no manual step needed.
+This creates the k3d cluster and deploys each component individually via `kubectl apply`. The `debezium-kafka-install` step also **automatically registers the PostgreSQL connector** by POSTing `k8s/kafka/debezium-connect/register-connector.json` to the Kafka Connect REST API.
 
-**Or step by step (if you prefer):**
+**Or step by step (kubectl only):**
 
 ```bash
 make cluster-create           # 1. Create k3d cluster with port mappings
@@ -150,6 +158,10 @@ kubectl logs deploy/debezium-connect --tail=30
 In a **separate terminal**:
 
 ```bash
+# If using Helm (service names: cdc-demo-postgres, cdc-demo-redis)
+make helm-port-forward-all
+
+# If using kubectl (service names: postgres-svc, redis-svc)
 make port-forward-all
 ```
 
@@ -554,10 +566,15 @@ make port-forward-all
 # Stop port-forwards
 make port-forward-stop
 
-# Remove only Phase 2 (keep Postgres + Redis)
+# --- kubectl cleanup ---
+# Remove only Kafka components (keep Postgres + Redis)
 make debezium-kafka-uninstall
 make kafka-uninstall
 
-# OR delete everything
+# OR delete everything (kubectl)
 make teardown
+
+# --- Helm cleanup ---
+# Delete everything (Helm)
+make helm-teardown
 ```
