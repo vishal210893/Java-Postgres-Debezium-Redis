@@ -1,0 +1,6 @@
+app:
+  cdc:
+    mode: kafka
+    kafka:
+      users-topic: "cdc_demo.public.users"
+      orders-topic: "cdc_demo.public.orders"

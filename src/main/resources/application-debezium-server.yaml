@@ -1,0 +1,13 @@
+app:
+  cdc:
+    mode: debezium-server
+    redis-stream:
+      users-stream: "cdc_demo.public.users"
+      orders-stream: "cdc_demo.public.orders"
+      consumer-group: "cdc-consumer-group"
+      consumer-name: "cdc-consumer-1"
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
