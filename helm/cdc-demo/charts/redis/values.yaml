@@ -1,0 +1,8 @@
+image:
+  repository: redis
+  tag: "7"
+
+service:
+  type: NodePort
+  port: 6379
+  nodePort: 30379

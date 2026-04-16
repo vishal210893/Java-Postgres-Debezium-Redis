@@ -1,0 +1,69 @@
+{{- $postgresHost := .Values.source.database.hostname | default (printf "%s-postgres.%s.svc.cluster.local" .Release.Name .Release.Namespace) -}}
+{{- $redisAddress := .Values.sink.redis.address | default (printf "%s-redis.%s.svc.cluster.local:%d" .Release.Name .Release.Namespace 6379) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-debezium-server
+  labels:
+    app.kubernetes.io/name: debezium-server
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: debezium-server
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: debezium-server
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: debezium-server
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          env:
+            - name: DEBEZIUM_SINK_TYPE
+              value: {{ .Values.sink.type | quote }}
+            - name: DEBEZIUM_SINK_REDIS_ADDRESS
+              value: {{ $redisAddress | quote }}
+            - name: DEBEZIUM_SOURCE_CONNECTOR_CLASS
+              value: "io.debezium.connector.postgresql.PostgresConnector"
+            - name: DEBEZIUM_SOURCE_OFFSET_STORAGE_FILE_FILENAME
+              value: "/debezium/data/offsets.dat"
+            - name: DEBEZIUM_SOURCE_OFFSET_FLUSH_INTERVAL_MS
+              value: {{ .Values.source.offsetFlushIntervalMs | quote }}
+            - name: DEBEZIUM_SOURCE_DATABASE_HOSTNAME
+              value: {{ $postgresHost | quote }}
+            - name: DEBEZIUM_SOURCE_DATABASE_PORT
+              value: {{ .Values.source.database.port | quote }}
+            - name: DEBEZIUM_SOURCE_DATABASE_USER
+              value: {{ .Values.source.database.user | quote }}
+            - name: DEBEZIUM_SOURCE_DATABASE_PASSWORD
+              value: {{ .Values.source.database.password | quote }}
+            - name: DEBEZIUM_SOURCE_DATABASE_DBNAME
+              value: {{ .Values.source.database.dbname | quote }}
+            - name: DEBEZIUM_SOURCE_TOPIC_PREFIX
+              value: {{ .Values.source.topicPrefix | quote }}
+            - name: DEBEZIUM_SOURCE_TABLE_INCLUDE_LIST
+              value: {{ .Values.source.tableIncludeList | quote }}
+            - name: DEBEZIUM_SOURCE_PLUGIN_NAME
+              value: {{ .Values.source.pluginName | quote }}
+            - name: DEBEZIUM_SOURCE_DATABASE_SERVER_NAME
+              value: {{ .Values.source.database.serverName | quote }}
+            - name: DEBEZIUM_SOURCE_DECIMAL_HANDLING_MODE
+              value: {{ .Values.source.decimalHandlingMode | quote }}
+            - name: DEBEZIUM_SOURCE_TIME_PRECISION_MODE
+              value: {{ .Values.source.timePrecisionMode | quote }}
+            - name: DEBEZIUM_FORMAT_VALUE_SCHEMAS_ENABLE
+              value: {{ .Values.format.value.schemasEnable | quote }}
+            - name: DEBEZIUM_FORMAT_KEY_SCHEMAS_ENABLE
+              value: {{ .Values.format.key.schemasEnable | quote }}
+          volumeMounts:
+            - name: debezium-data
+              mountPath: /debezium/data
+      volumes:
+        - name: debezium-data
+          emptyDir: {}

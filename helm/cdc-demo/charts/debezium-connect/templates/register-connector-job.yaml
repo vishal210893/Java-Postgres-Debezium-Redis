@@ -1,0 +1,71 @@
+{{- $connectHost := printf "%s-debezium-connect" .Release.Name -}}
+{{- $postgresHost := .Values.connector.database.hostname | default (printf "%s-postgres.%s.svc.cluster.local" .Release.Name .Release.Namespace) -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-register-connector
+  labels:
+    app.kubernetes.io/name: register-connector
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: {{ .Values.registerJob.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: register-connector
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: register-connector
+          image: {{ .Values.registerJob.image.repository }}:{{ .Values.registerJob.image.tag }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for Debezium Connect to be ready..."
+              RETRIES={{ .Values.registerJob.retries }}
+              INTERVAL={{ .Values.registerJob.retryInterval }}
+              for i in $(seq 1 $RETRIES); do
+                STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://{{ $connectHost }}:{{ .Values.service.port }}/connectors)
+                if [ "$STATUS" = "200" ]; then
+                  echo "Debezium Connect is ready. Registering connector..."
+                  curl -s -X POST \
+                    -H "Content-Type: application/json" \
+                    -d '{
+                      "name": {{ .Values.connector.name | quote }},
+                      "config": {
+                        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+                        "database.hostname": {{ $postgresHost | quote }},
+                        "database.port": {{ .Values.connector.database.port | quote }},
+                        "database.user": {{ .Values.connector.database.user | quote }},
+                        "database.password": {{ .Values.connector.database.password | quote }},
+                        "database.dbname": {{ .Values.connector.database.dbname | quote }},
+                        "database.server.name": {{ .Values.connector.database.serverName | quote }},
+                        "topic.prefix": {{ .Values.connector.topicPrefix | quote }},
+                        "table.include.list": {{ .Values.connector.tableIncludeList | quote }},
+                        "plugin.name": {{ .Values.connector.pluginName | quote }},
+                        "slot.name": {{ .Values.connector.slotName | quote }},
+                        "publication.name": {{ .Values.connector.publicationName | quote }},
+                        "decimal.handling.mode": {{ .Values.connector.decimalHandlingMode | quote }},
+                        "time.precision.mode": {{ .Values.connector.timePrecisionMode | quote }},
+                        "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+                        "key.converter.schemas.enable": "false",
+                        "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+                        "value.converter.schemas.enable": "false"
+                      }
+                    }' \
+                    http://{{ $connectHost }}:{{ .Values.service.port }}/connectors
+                  echo ""
+                  echo "Connector registered successfully."
+                  exit 0
+                fi
+                echo "Attempt $i/$RETRIES: Connect not ready (HTTP $STATUS). Retrying in ${INTERVAL}s..."
+                sleep $INTERVAL
+              done
+              echo "ERROR: Debezium Connect did not become ready after $RETRIES attempts."
+              exit 1

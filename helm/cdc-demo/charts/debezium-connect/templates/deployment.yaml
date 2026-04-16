@@ -1,0 +1,42 @@
+{{- $kafkaBootstrap := .Values.kafka.bootstrapServers | default (printf "%s-kafka.%s.svc.cluster.local:9092" .Release.Name .Release.Namespace) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-debezium-connect
+  labels:
+    app.kubernetes.io/name: debezium-connect
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: debezium-connect
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: debezium-connect
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: debezium-connect
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          env:
+            - name: BOOTSTRAP_SERVERS
+              value: {{ $kafkaBootstrap | quote }}
+            - name: GROUP_ID
+              value: {{ .Values.connect.groupId | quote }}
+            - name: CONFIG_STORAGE_TOPIC
+              value: {{ .Values.connect.configStorageTopic | quote }}
+            - name: OFFSET_STORAGE_TOPIC
+              value: {{ .Values.connect.offsetStorageTopic | quote }}
+            - name: STATUS_STORAGE_TOPIC
+              value: {{ .Values.connect.statusStorageTopic | quote }}
+            - name: CONFIG_STORAGE_REPLICATION_FACTOR
+              value: {{ .Values.connect.replicationFactor | quote }}
+            - name: OFFSET_STORAGE_REPLICATION_FACTOR
+              value: {{ .Values.connect.replicationFactor | quote }}
+            - name: STATUS_STORAGE_REPLICATION_FACTOR
+              value: {{ .Values.connect.replicationFactor | quote }}

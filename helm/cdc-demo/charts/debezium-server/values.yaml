@@ -1,0 +1,32 @@
+image:
+  repository: quay.io/debezium/server
+  tag: "2.7"
+
+service:
+  port: 8080
+
+source:
+  database:
+    hostname: ""
+    port: 5432
+    user: postgres
+    password: postgres
+    dbname: cdc_demo
+    serverName: cdc_demo
+  topicPrefix: cdc_demo
+  tableIncludeList: "public.users,public.orders"
+  pluginName: pgoutput
+  decimalHandlingMode: string
+  timePrecisionMode: connect
+  offsetFlushIntervalMs: "0"
+
+sink:
+  type: redis
+  redis:
+    address: ""
+
+format:
+  value:
+    schemasEnable: "false"
+  key:
+    schemasEnable: "false"

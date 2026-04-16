@@ -1,0 +1,6 @@
+apiVersion: v2
+name: debezium-connect
+description: Debezium Kafka Connect for CDC with Kafka mode
+type: application
+version: 0.1.0
+appVersion: "2.7"

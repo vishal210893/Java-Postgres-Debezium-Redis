@@ -1,0 +1,20 @@
+# =============================================================================
+# Debezium Redis Sink Mode
+# =============================================================================
+# Architecture: PostgreSQL → Debezium Server → Redis Streams → Spring Boot → Redis Keys
+#
+# Usage:
+#   helm install cdc-demo helm/cdc-demo -f helm/cdc-demo/values-debezium-redis-sink.yaml
+#
+# Components enabled: Redis, PostgreSQL, Debezium Server
+# Kafka and Debezium Connect remain disabled (default from values.yaml)
+# =============================================================================
+
+redis:
+  enabled: true
+
+postgres:
+  enabled: true
+
+debezium-server:
+  enabled: true

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kafka
+description: Apache Kafka in KRaft mode for CDC event streaming
+type: application
+version: 0.1.0
+appVersion: "3.7.0"

@@ -1,0 +1,13 @@
+image:
+  repository: apache/kafka
+  tag: "3.7.0"
+
+service:
+  type: NodePort
+  port: 9092
+  nodePort: 30092
+  externalPort: 9094
+  externalNodePort: 30094
+
+kraft:
+  clusterId: MkU3OEVBNTcwNTJENDM2Qk

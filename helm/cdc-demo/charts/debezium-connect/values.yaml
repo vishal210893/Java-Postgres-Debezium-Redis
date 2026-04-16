@@ -1,0 +1,43 @@
+image:
+  repository: quay.io/debezium/connect
+  tag: "2.7"
+
+service:
+  type: NodePort
+  port: 8083
+  nodePort: 30083
+
+kafka:
+  bootstrapServers: ""
+
+connect:
+  groupId: cdc-connect-group
+  configStorageTopic: cdc_connect_configs
+  offsetStorageTopic: cdc_connect_offsets
+  statusStorageTopic: cdc_connect_statuses
+  replicationFactor: 1
+
+connector:
+  name: cdc-postgres-connector
+  database:
+    hostname: ""
+    port: 5432
+    user: postgres
+    password: postgres
+    dbname: cdc_demo
+    serverName: cdc_demo
+  topicPrefix: cdc_demo
+  tableIncludeList: "public.users,public.orders"
+  pluginName: pgoutput
+  slotName: cdc_demo_slot
+  publicationName: cdc_demo_publication
+  decimalHandlingMode: string
+  timePrecisionMode: connect
+
+registerJob:
+  image:
+    repository: curlimages/curl
+    tag: "8.7.1"
+  backoffLimit: 5
+  retries: 30
+  retryInterval: 10

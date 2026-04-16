@@ -1,0 +1,23 @@
+# =============================================================================
+# Debezium Kafka Mode
+# =============================================================================
+# Architecture: PostgreSQL → Debezium Kafka Connect → Kafka → Spring Boot → Redis Keys
+#
+# Usage:
+#   helm install cdc-demo helm/cdc-demo -f helm/cdc-demo/values-debezium-kafka.yaml
+#
+# Components enabled: Redis, PostgreSQL, Kafka, Debezium Connect
+# Debezium Server remains disabled (default from values.yaml)
+# =============================================================================
+
+redis:
+  enabled: true
+
+postgres:
+  enabled: true
+
+kafka:
+  enabled: true
+
+debezium-connect:
+  enabled: true

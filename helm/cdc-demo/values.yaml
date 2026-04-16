@@ -1,0 +1,25 @@
+# =============================================================================
+# CDC Demo - Umbrella Chart Values
+# =============================================================================
+#
+# Two CDC modes are available. Use the corresponding values file:
+#
+#   Debezium Redis Sink (WAL → Redis Streams → Spring Boot):
+#     helm install cdc-demo helm/cdc-demo -f helm/cdc-demo/values-debezium-redis-sink.yaml
+#
+#   Debezium Kafka (WAL → Kafka → Spring Boot):
+#     helm install cdc-demo helm/cdc-demo -f helm/cdc-demo/values-debezium-kafka.yaml
+#
+# =============================================================================
+
+# By default, nothing is enabled. Use a values file above to activate a mode.
+redis:
+  enabled: false
+postgres:
+  enabled: false
+debezium-server:
+  enabled: false
+kafka:
+  enabled: false
+debezium-connect:
+  enabled: false

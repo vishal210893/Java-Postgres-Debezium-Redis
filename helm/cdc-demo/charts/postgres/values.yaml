@@ -1,0 +1,17 @@
+image:
+  repository: cdc-postgres
+  tag: latest
+  pullPolicy: Never
+
+service:
+  type: NodePort
+  port: 5432
+  nodePort: 30432
+
+auth:
+  username: postgres
+  password: postgres
+  database: cdc_demo
+
+persistence:
+  size: 1Gi

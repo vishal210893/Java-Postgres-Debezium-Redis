@@ -1,0 +1,23 @@
+apiVersion: v2
+name: cdc-demo
+description: CDC Demo - Change Data Capture with Debezium, PostgreSQL, Redis, and Kafka
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+dependencies:
+  - name: redis
+    version: 0.1.0
+    condition: redis.enabled
+  - name: postgres
+    version: 0.1.0
+    condition: postgres.enabled
+  - name: debezium-server
+    version: 0.1.0
+    condition: debezium-server.enabled
+  - name: kafka
+    version: 0.1.0
+    condition: kafka.enabled
+  - name: debezium-connect
+    version: 0.1.0
+    condition: debezium-connect.enabled

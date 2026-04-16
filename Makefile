@@ -7,7 +7,10 @@
         debezium-kafka-install debezium-kafka-uninstall debezium-kafka-register \
         port-forward-postgres port-forward-redis port-forward-all port-forward-stop \
         app-stop app-build app-run app-run-debezium-redis-sink app-run-debezium-kafka \
-        setup-debezium-redis-sink setup-debezium-kafka teardown status
+        setup-debezium-redis-sink setup-debezium-kafka teardown status \
+        helm-install-debezium-redis-sink helm-install-debezium-kafka \
+        helm-uninstall helm-upgrade helm-status helm-port-forward-all \
+        helm-setup-debezium-redis-sink helm-setup-debezium-kafka helm-teardown
 
 # ==================== Help ====================
 # Usage: make help
@@ -33,7 +36,7 @@ help: ## Show this help message
 	@echo ""
 	@echo "--- Individual Targets ---"
 	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-35s\033[0m %s\n", $$1, $$2}'
 
 # ==================== Cluster ====================
 # Creates or deletes the k3d Kubernetes cluster with port mappings
@@ -249,3 +252,8 @@ status: ## Show current state of pods, services, and PVCs in the k3d cluster
 	kubectl get svc
 	@echo "\n=== PVCs ==="
 	kubectl get pvc
+
+# ==================== Helm Targets ====================
+# Import Helm-based targets from make/helm.mk.
+# Run 'make helm-setup-debezium-redis-sink' or 'make helm-setup-debezium-kafka' to use Helm.
+include make/helm.mk
