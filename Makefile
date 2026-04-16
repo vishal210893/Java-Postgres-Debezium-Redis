@@ -3,6 +3,7 @@
         debezium-install debezium-uninstall \
         kafka-install kafka-uninstall \
         debezium-kafka-install debezium-kafka-uninstall debezium-kafka-register \
+        port-forward-postgres port-forward-stop \
         app-build app-run app-run-phase1 app-run-phase2 \
         all-phase1 all-phase2 all-clean status
 
@@ -12,6 +13,7 @@ cluster-create:
 	k3d cluster create cdc-demo \
 		-p "30432:30432@server:0" \
 		-p "30092:30092@server:0" \
+		-p "30094:30094@server:0" \
 		-p "30083:30083@server:0"
 	@echo "k3d cluster 'cdc-demo' created"
 
@@ -89,6 +91,18 @@ debezium-kafka-uninstall:
 	kubectl delete -f k8s/kafka/debezium-connect/deployment.yaml --ignore-not-found
 	@echo "Debezium Connect uninstalled"
 
+# ==================== Port Forward ====================
+
+port-forward-postgres:
+	@echo "Port-forwarding PostgreSQL: localhost:5432 -> postgres pod:5432"
+	@echo "Run this in a separate terminal (Ctrl+C to stop)"
+	kubectl port-forward svc/postgres-svc 5432:5432
+
+port-forward-stop:
+	@echo "Killing all kubectl port-forward processes..."
+	-pkill -f "kubectl port-forward" || true
+	@echo "Port forwards stopped"
+
 # ==================== App ====================
 
 app-build:
@@ -107,11 +121,15 @@ app-run-phase2:
 
 all-phase1: cluster-create postgres-install debezium-install
 	@echo "Phase 1 infrastructure ready (PostgreSQL + Debezium Server)"
-	@echo "Run: make app-run-phase1"
+	@echo "Next steps:"
+	@echo "  1. In a separate terminal: make port-forward-postgres"
+	@echo "  2. Run: make app-run-phase1"
 
 all-phase2: kafka-install debezium-kafka-install
 	@echo "Phase 2 infrastructure ready (Kafka + Debezium Connect)"
-	@echo "Run: make app-run-phase2"
+	@echo "Next steps:"
+	@echo "  1. Ensure port-forward-postgres is running"
+	@echo "  2. Run: make app-run-phase2"
 
 all-clean: cluster-delete
 	@echo "All infrastructure cleaned up"

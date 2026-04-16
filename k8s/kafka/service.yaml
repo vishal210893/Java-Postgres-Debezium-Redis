@@ -7,6 +7,11 @@ spec:
   selector:
     app: kafka
   ports:
-    - port: 9092
+    - name: internal
+      port: 9092
       targetPort: 9092
       nodePort: 30092
+    - name: external
+      port: 9094
+      targetPort: 9094
+      nodePort: 30094

@@ -4,3 +4,7 @@ app:
     kafka:
       users-topic: "cdc_demo.public.users"
       orders-topic: "cdc_demo.public.orders"
+
+spring:
+  kafka:
+    bootstrap-servers: localhost:30094
