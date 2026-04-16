@@ -28,13 +28,21 @@ public class KafkaCdcConsumer {
 
     @KafkaListener(topics = "${app.cdc.kafka.users-topic}", groupId = "cdc-demo-group")
     public void consumeUserEvent(String eventJson) {
-        log.debug("Received user CDC event from Kafka");
-        cdcEventTransformer.processEvent(eventJson);
+        try {
+            log.debug("Received user CDC event from Kafka");
+            cdcEventTransformer.processEvent(eventJson);
+        } catch (Exception e) {
+            log.error("Failed to process user CDC event from Kafka", e);
+        }
     }
 
     @KafkaListener(topics = "${app.cdc.kafka.orders-topic}", groupId = "cdc-demo-group")
     public void consumeOrderEvent(String eventJson) {
-        log.debug("Received order CDC event from Kafka");
-        cdcEventTransformer.processEvent(eventJson);
+        try {
+            log.debug("Received order CDC event from Kafka");
+            cdcEventTransformer.processEvent(eventJson);
+        } catch (Exception e) {
+            log.error("Failed to process order CDC event from Kafka", e);
+        }
     }
 }
