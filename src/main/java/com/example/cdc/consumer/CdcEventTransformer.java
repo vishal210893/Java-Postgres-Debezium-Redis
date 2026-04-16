@@ -4,18 +4,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.base.CaseFormat;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Base64;
 import java.util.Set;
 
 /**
@@ -25,26 +23,31 @@ import java.util.Set;
  * data to Redis. Used by both {@link RedisStreamConsumer} (Phase 1) and
  * {@link KafkaCdcConsumer} (Phase 2).
  *
+ * <p>Field name conversion from Debezium's snake_case to camelCase is handled by
+ * Guava's {@link CaseFormat}. Timestamp conversion from Debezium's epoch millis
+ * ({@code time.precision.mode=connect}) to ISO {@link LocalDateTime} uses standard
+ * {@link Instant} APIs. Decimal handling is delegated to Debezium's
+ * {@code decimal.handling.mode=string} configuration.
+ *
  * <pre>
  *  Debezium CDC Event Envelope:
  *  {
  *    "before": { ... },
- *    "after":  { "id": 1, ... },
- *    "source": { "table": "users", ... },
+ *    "after":  { "id": 1, "user_id": 1, "created_at": 1713275445123, ... },
+ *    "source": { "table": "orders", ... },
  *    "op":     "c"
  *  }
  *
- *  Transformer extracts "after" payload and writes:
- *    user:1 = {"id":1,"username":"alice",...}   (for users table)
- *    order:1 = {"id":1,"userId":1,...}          (for orders table)
- *
- *  On DELETE (op=d), removes the key from Redis.
+ *  Transformer output to Redis:
+ *    order:1 = {"id":1,"userId":1,"createdAt":"2026-04-16T23:30:45.123",...}
  * </pre>
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class CdcEventTransformer {
+
+    private static final Set<String> TIMESTAMP_FIELDS = Set.of("created_at", "updated_at");
 
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
@@ -104,8 +107,7 @@ public class CdcEventTransformer {
         Long id = after.get("id").asLong();
         String key = keyPrefix + id;
         ObjectNode cleanNode = convertToCleanJson(after);
-        String json = cleanNode.toString();
-        redisTemplate.opsForValue().set(key, json);
+        redisTemplate.opsForValue().set(key, cleanNode.toString());
         log.info("CDC {} key={} op={}", keyPrefix.contains("user") ? "User" : "Order", key, operation);
     }
 
@@ -119,6 +121,23 @@ public class CdcEventTransformer {
         String key = keyPrefix + id;
         redisTemplate.delete(key);
         log.info("CDC DELETE key={}", key);
+    }
+
+    private ObjectNode convertToCleanJson(JsonNode after) {
+        ObjectNode node = objectMapper.createObjectNode();
+        after.fields().forEachRemaining(entry -> {
+            String camelKey = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, entry.getKey());
+            JsonNode value = entry.getValue();
+
+            if (TIMESTAMP_FIELDS.contains(entry.getKey()) && value.isNumber()) {
+                LocalDateTime ldt = LocalDateTime.ofInstant(
+                        Instant.ofEpochMilli(value.asLong()), ZoneId.systemDefault());
+                node.put(camelKey, ldt.toString());
+            } else {
+                node.set(camelKey, value);
+            }
+        });
+        return node;
     }
 
     private String extractTable(JsonNode payload) {
@@ -135,54 +154,5 @@ public class CdcEventTransformer {
             case "orders" -> orderKeyPrefix;
             default -> null;
         };
-    }
-
-    private static final Set<String> TIMESTAMP_FIELDS = Set.of(
-            "created_at", "updated_at"
-    );
-    private static final Set<String> DECIMAL_FIELDS = Set.of("amount");
-    private static final int DECIMAL_SCALE = 2;
-
-    private ObjectNode convertToCleanJson(JsonNode after) {
-        ObjectNode node = objectMapper.createObjectNode();
-        after.fields().forEachRemaining(entry -> {
-            String fieldName = toCamelCase(entry.getKey());
-            String rawKey = entry.getKey();
-            JsonNode value = entry.getValue();
-
-            if (TIMESTAMP_FIELDS.contains(rawKey) && value.isNumber()) {
-                long microSeconds = value.asLong();
-                Instant instant = Instant.ofEpochSecond(
-                        microSeconds / 1_000_000, (microSeconds % 1_000_000) * 1_000);
-                LocalDateTime ldt = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
-                node.put(fieldName, ldt.toString());
-            } else if (DECIMAL_FIELDS.contains(rawKey) && value.isTextual()) {
-                byte[] bytes = Base64.getDecoder().decode(value.asText());
-                BigDecimal decimal = new BigDecimal(new BigInteger(bytes), DECIMAL_SCALE);
-                node.put(fieldName, decimal);
-            } else {
-                node.set(fieldName, value);
-            }
-        });
-        return node;
-    }
-
-    private String toCamelCase(String snakeCase) {
-        if (!snakeCase.contains("_")) {
-            return snakeCase;
-        }
-        StringBuilder result = new StringBuilder();
-        boolean capitalizeNext = false;
-        for (char c : snakeCase.toCharArray()) {
-            if (c == '_') {
-                capitalizeNext = true;
-            } else if (capitalizeNext) {
-                result.append(Character.toUpperCase(c));
-                capitalizeNext = false;
-            } else {
-                result.append(c);
-            }
-        }
-        return result.toString();
     }
 }

@@ -9,8 +9,9 @@ import org.springframework.context.annotation.Configuration;
 /**
  * <b>Jackson Configuration</b>
  *
- * <p>Provides an {@link ObjectMapper} bean for JSON serialization/deserialization
- * used by CDC event processing and Redis read services.
+ * <p>Provides an {@link ObjectMapper} bean with {@link JavaTimeModule} for proper
+ * {@link java.time.LocalDateTime} serialization. Used across the application by
+ * CDC event processing, Redis read services, and REST controllers.
  */
 @Configuration
 public class JacksonConfig {

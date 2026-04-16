@@ -48,6 +48,10 @@ spec:
               value: "pgoutput"
             - name: DEBEZIUM_SOURCE_DATABASE_SERVER_NAME
               value: "cdc_demo"
+            - name: DEBEZIUM_SOURCE_DECIMAL_HANDLING_MODE
+              value: "string"
+            - name: DEBEZIUM_SOURCE_TIME_PRECISION_MODE
+              value: "connect"
           volumeMounts:
             - name: debezium-data
               mountPath: /debezium/data
