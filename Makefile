@@ -1,9 +1,10 @@
 .PHONY: cluster-create cluster-delete \
+        redis-install redis-uninstall \
         postgres-image postgres-image-load postgres-install postgres-uninstall \
         debezium-install debezium-uninstall \
         kafka-install kafka-uninstall \
         debezium-kafka-install debezium-kafka-uninstall debezium-kafka-register \
-        port-forward-postgres port-forward-stop \
+        port-forward-postgres port-forward-redis port-forward-all port-forward-stop \
         app-build app-run app-run-phase1 app-run-phase2 \
         all-phase1 all-phase2 all-clean status
 
@@ -20,6 +21,19 @@ cluster-create:
 cluster-delete:
 	k3d cluster delete cdc-demo
 	@echo "k3d cluster 'cdc-demo' deleted"
+
+# ==================== Redis ====================
+
+redis-install:
+	kubectl apply -f k8s/redis/deployment.yaml
+	kubectl apply -f k8s/redis/service.yaml
+	kubectl wait --for=condition=ready pod -l app=redis --timeout=120s
+	@echo "Redis installed and ready"
+
+redis-uninstall:
+	kubectl delete -f k8s/redis/service.yaml --ignore-not-found
+	kubectl delete -f k8s/redis/deployment.yaml --ignore-not-found
+	@echo "Redis uninstalled"
 
 # ==================== PostgreSQL ====================
 
@@ -98,6 +112,18 @@ port-forward-postgres:
 	@echo "Run this in a separate terminal (Ctrl+C to stop)"
 	kubectl port-forward svc/postgres-svc 5432:5432
 
+port-forward-redis:
+	@echo "Port-forwarding Redis: localhost:6379 -> redis pod:6379"
+	@echo "Run this in a separate terminal (Ctrl+C to stop)"
+	kubectl port-forward svc/redis-svc 6379:6379
+
+port-forward-all:
+	@echo "Starting port-forwards in background..."
+	kubectl port-forward svc/postgres-svc 5432:5432 &
+	kubectl port-forward svc/redis-svc 6379:6379 &
+	@echo "Port-forwards running: PostgreSQL(5432), Redis(6379)"
+	@echo "Run 'make port-forward-stop' to stop all"
+
 port-forward-stop:
 	@echo "Killing all kubectl port-forward processes..."
 	-pkill -f "kubectl port-forward" || true
@@ -119,11 +145,11 @@ app-run-phase2:
 
 # ==================== Combo ====================
 
-all-phase1: cluster-create postgres-install debezium-install
-	@echo "Phase 1 infrastructure ready (PostgreSQL + Debezium Server)"
+all-phase1: cluster-create redis-install postgres-install debezium-install
+	@echo "Phase 1 infrastructure ready (Redis + PostgreSQL + Debezium Server)"
 	@echo "Next steps:"
-	@echo "  1. In a separate terminal: make port-forward-postgres"
-	@echo "  2. Run: make app-run-phase1"
+	@echo "  1. Run: make port-forward-all"
+	@echo "  2. Run: DB_PASSWORD=postgres make app-run-phase1"
 
 all-phase2: kafka-install debezium-kafka-install
 	@echo "Phase 2 infrastructure ready (Kafka + Debezium Connect)"

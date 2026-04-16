@@ -10,6 +10,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Base64;
+import java.util.Set;
+
 /**
  * <b>CDC Event Transformer</b>
  *
@@ -129,11 +137,32 @@ public class CdcEventTransformer {
         };
     }
 
+    private static final Set<String> TIMESTAMP_FIELDS = Set.of(
+            "created_at", "updated_at"
+    );
+    private static final Set<String> DECIMAL_FIELDS = Set.of("amount");
+    private static final int DECIMAL_SCALE = 2;
+
     private ObjectNode convertToCleanJson(JsonNode after) {
         ObjectNode node = objectMapper.createObjectNode();
         after.fields().forEachRemaining(entry -> {
             String fieldName = toCamelCase(entry.getKey());
-            node.set(fieldName, entry.getValue());
+            String rawKey = entry.getKey();
+            JsonNode value = entry.getValue();
+
+            if (TIMESTAMP_FIELDS.contains(rawKey) && value.isNumber()) {
+                long microSeconds = value.asLong();
+                Instant instant = Instant.ofEpochSecond(
+                        microSeconds / 1_000_000, (microSeconds % 1_000_000) * 1_000);
+                LocalDateTime ldt = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+                node.put(fieldName, ldt.toString());
+            } else if (DECIMAL_FIELDS.contains(rawKey) && value.isTextual()) {
+                byte[] bytes = Base64.getDecoder().decode(value.asText());
+                BigDecimal decimal = new BigDecimal(new BigInteger(bytes), DECIMAL_SCALE);
+                node.put(fieldName, decimal);
+            } else {
+                node.set(fieldName, value);
+            }
         });
         return node;
     }
