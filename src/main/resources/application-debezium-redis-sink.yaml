@@ -1,6 +1,6 @@
 app:
   cdc:
-    mode: debezium-server
+    mode: debezium-redis-sink
     redis-stream:
       users-stream: "cdc_demo.public.users"
       orders-stream: "cdc_demo.public.orders"

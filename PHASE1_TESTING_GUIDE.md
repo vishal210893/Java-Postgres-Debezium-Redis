@@ -41,9 +41,9 @@
 7. Spring Boot RedisStreamConsumer picks up the event from the stream
 8. CdcEventTransformer parses the Debezium envelope:
    - Extracts "after" payload
-   - Converts snake_case to camelCase
-   - Converts Debezium timestamps (microseconds) to ISO LocalDateTime
-   - Converts Debezium decimals (base64) to BigDecimal
+   - Converts snake_case to camelCase (via Guava CaseFormat)
+   - Converts Debezium timestamps (epoch millis) to ISO LocalDateTime
+   - Decimals handled by Debezium's decimal.handling.mode=string config
    - Writes to Redis as: user:1 = {"id":1,"username":"alice",...}
 9. Client sends GET /api/users/1 → Spring Boot Read API → Redis → returns JSON
 ```
@@ -126,12 +126,25 @@ kubectl exec deploy/postgres -- psql -U postgres -d cdc_demo -c "SELECT 1;"
 
 ## Step 3: Start Spring Boot Application
 
+### Option A: From Terminal
+
 In a **third terminal**:
 
 ```bash
 export DB_PASSWORD=postgres
-mvn spring-boot:run -Dspring-boot.run.profiles=debezium-server
+mvn spring-boot:run -Dspring-boot.run.profiles=debezium-redis-sink
 ```
+
+### Option B: From IntelliJ IDEA
+
+1. Open **Run/Debug Configurations** (top-right dropdown → Edit Configurations)
+2. Select or create a **Spring Boot** run configuration for `CdcDemoApplication`
+3. Set **Active profiles**: `debezium-redis-sink`
+4. Set **Environment variables**: `DB_PASSWORD=postgres`
+5. Alternatively, add **VM options**: `-Dspring.profiles.active=debezium-redis-sink`
+6. Click **Run**
+
+**IMPORTANT:** The `debezium-redis-sink` profile activates the `RedisStreamConsumer` which reads CDC events from Redis Streams and writes them as `user:{id}` / `order:{id}` keys. Without this profile, the CDC consumer will NOT start and no data will appear in Redis keys.
 
 **Verify app is running:**
 
@@ -140,6 +153,14 @@ curl http://localhost:8082/actuator/health
 ```
 
 Expected: `"status":"UP"` with `db: UP` and `redis: UP`.
+
+**Verify CDC mode is active:**
+
+```bash
+curl http://localhost:8082/api/health/cdc
+```
+
+Expected: `"cdcMode":"debezium-redis-sink"`. If it shows `"cdcMode":"none"`, the profile is not set.
 
 **Swagger UI:** Open http://localhost:8082/swagger-ui.html
 
@@ -382,10 +403,11 @@ Common causes:
 
 ### Data not appearing in Redis
 
-1. Check Debezium is running: `kubectl get pods`
-2. Check Redis Streams have data: `redis-cli -p 6379 XLEN "cdc_demo.public.users"`
-3. Check Spring Boot consumer logs (look for CDC INFO messages)
-4. Check consumer group: `redis-cli -p 6379 XINFO GROUPS "cdc_demo.public.users"`
+1. **Check the Spring profile is active**: `curl -s http://localhost:8082/api/health/cdc` — must show `"cdcMode":"debezium-redis-sink"`. If it shows `"none"`, the app is running without the profile. Set `-Dspring.profiles.active=debezium-redis-sink` in your IDE or terminal.
+2. Check Debezium is running: `kubectl get pods`
+3. Check Redis Streams have data: `redis-cli -p 6379 XLEN "cdc_demo.public.users"`
+4. Check Spring Boot consumer logs (look for CDC INFO messages)
+5. Check consumer group: `redis-cli -p 6379 XINFO GROUPS "cdc_demo.public.users"`
 
 ### Port-forward issues
 

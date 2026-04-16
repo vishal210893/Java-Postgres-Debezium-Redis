@@ -30,11 +30,11 @@ import java.time.Duration;
  *  Debezium Server ──> Redis Streams ──> RedisStreamConsumer ──> CdcEventTransformer ──> Redis Keys
  * </pre>
  *
- * <p>Active only when {@code debezium-server} profile is enabled.
+ * <p>Active only when {@code debezium-redis-sink} profile is enabled.
  */
 @Slf4j
 @Component
-@Profile("debezium-server")
+@Profile("debezium-redis-sink")
 @RequiredArgsConstructor
 public class RedisStreamConsumer implements StreamListener<String, MapRecord<String, String, String>> {
 

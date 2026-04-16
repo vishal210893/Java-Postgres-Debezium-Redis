@@ -17,10 +17,10 @@ help: ## Show this help message
 	@echo "CDC Demo - Makefile Targets"
 	@echo "=========================="
 	@echo ""
-	@echo "Quick Start (Phase 1 - Debezium Server → Redis):"
+	@echo "Quick Start (Phase 1 - Debezium Redis Sink):"
 	@echo "  1. make all-phase1         # Create k3d cluster + deploy Redis, PostgreSQL, Debezium Server"
 	@echo "  2. make port-forward-all   # Expose PostgreSQL(5432) and Redis(6379) to localhost"
-	@echo "  3. DB_PASSWORD=postgres make app-run-phase1  # Start Spring Boot app"
+	@echo "  3. DB_PASSWORD=postgres make app-run-phase1  # Start Spring Boot with debezium-redis-sink profile"
 	@echo ""
 	@echo "Quick Start (Phase 2 - Kafka pipeline, requires Phase 1 infra running):"
 	@echo "  1. make all-phase2         # Deploy Kafka + Debezium Kafka Connect on top of Phase 1"
@@ -195,8 +195,8 @@ app-build: ## Build the Spring Boot app (Maven compile + checkstyle)
 app-run: ## Run Spring Boot app with default profile (no CDC consumer active)
 	./mvnw spring-boot:run
 
-app-run-phase1: ## Run Spring Boot app with 'debezium-server' profile (Redis Stream consumer)
-	./mvnw spring-boot:run -Dspring-boot.run.profiles=debezium-server
+app-run-phase1: ## Run Spring Boot app with 'debezium-redis-sink' profile (Redis Stream consumer)
+	./mvnw spring-boot:run -Dspring-boot.run.profiles=debezium-redis-sink
 
 app-run-phase2: ## Run Spring Boot app with 'kafka' profile (Kafka consumer)
 	./mvnw spring-boot:run -Dspring-boot.run.profiles=kafka

@@ -9,7 +9,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 ./mvnw clean compile
 
 # Run (Phase 1 — Debezium Server mode)
-./mvnw spring-boot:run -Dspring-boot.run.profiles=debezium-server
+./mvnw spring-boot:run -Dspring-boot.run.profiles=debezium-redis-sink
 
 # Run (Phase 2 — Kafka mode)
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=kafka
@@ -31,7 +31,7 @@ Reads are served from Redis (CDC-populated cache).
 
 ### Two CDC Modes (Spring Profiles)
 
-**Phase 1 — Debezium Server (`debezium-server` profile):**
+**Phase 1 — Debezium Server (`debezium-redis-sink` profile):**
 Debezium Server reads PostgreSQL WAL and writes CDC events to Redis Streams.
 Spring Boot `RedisStreamConsumer` transforms events into `user:{id}` / `order:{id}` JSON keys.
 

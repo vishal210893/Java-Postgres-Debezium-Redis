@@ -19,10 +19,10 @@ import java.util.Map;
  * <b>CDC Health Controller</b>
  *
  * <p>Exposes a health endpoint for the CDC pipeline, reporting Redis connectivity
- * and the active CDC mode (debezium-server or kafka).
+ * and the active CDC mode (debezium-redis-sink or kafka).
  *
  * <pre>
- *  GET /api/health/cdc ──> { redis: UP/DOWN, cdcMode: "debezium-server"|"kafka"|"none" }
+ *  GET /api/health/cdc ──> { redis: UP/DOWN, cdcMode: "debezium-redis-sink"|"kafka"|"none" }
  * </pre>
  */
 @Slf4j
