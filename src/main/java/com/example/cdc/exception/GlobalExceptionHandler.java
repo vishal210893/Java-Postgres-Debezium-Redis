@@ -2,6 +2,7 @@ package com.example.cdc.exception;
 
 import com.example.cdc.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -84,10 +85,27 @@ public class GlobalExceptionHandler {
                                 ? ex.getRequiredType().getSimpleName() : "unknown")));
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        String message = extractConstraintMessage(ex);
+        log.warn("Data integrity violation: {}", message);
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(message));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
         log.error("Unexpected error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("An unexpected error occurred"));
+    }
+
+    private String extractConstraintMessage(DataIntegrityViolationException ex) {
+        Throwable root = ex.getMostSpecificCause();
+        String detail = root.getMessage();
+        if (detail != null && detail.contains("Detail:")) {
+            return detail.substring(detail.indexOf("Detail:") + 8).trim();
+        }
+        return "A record with the given values already exists";
     }
 }
