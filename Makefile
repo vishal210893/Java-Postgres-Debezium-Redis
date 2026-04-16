@@ -71,13 +71,21 @@ redis-uninstall: ## Remove Redis deployment and service from k3d cluster
 # (required for Debezium CDC), loads it into k3d, and deploys it.
 # Database 'cdc_demo' is created automatically via POSTGRES_DB env var.
 
-postgres-image: ## Build custom PostgreSQL Docker image with WAL logical replication
-	docker build -t cdc-postgres:latest k8s/postgres/
-	@echo "PostgreSQL image built: cdc-postgres:latest"
+postgres-image: ## Build custom PostgreSQL Docker image (skips if already exists)
+	@if docker image inspect cdc-postgres:latest >/dev/null 2>&1; then \
+		echo "PostgreSQL image already exists, skipping build"; \
+	else \
+		docker build -t cdc-postgres:latest k8s/postgres/; \
+		echo "PostgreSQL image built: cdc-postgres:latest"; \
+	fi
 
-postgres-image-load: ## Import PostgreSQL image into k3d cluster
-	k3d image import cdc-postgres:latest -c cdc-demo
-	@echo "PostgreSQL image loaded into k3d cluster"
+postgres-image-load: ## Import PostgreSQL image into k3d cluster (skips if already loaded)
+	@if docker exec k3d-cdc-demo-server-0 crictl images 2>/dev/null | grep -q cdc-postgres; then \
+		echo "PostgreSQL image already loaded in k3d, skipping import"; \
+	else \
+		k3d image import cdc-postgres:latest -c cdc-demo; \
+		echo "PostgreSQL image loaded into k3d cluster"; \
+	fi
 
 postgres-install: postgres-image postgres-image-load ## Build, load, and deploy PostgreSQL (runs postgres-image + postgres-image-load first)
 	kubectl apply -f k8s/postgres/deployment.yaml
