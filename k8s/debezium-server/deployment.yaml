@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debezium-server
+  labels:
+    app: debezium-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: debezium-server
+  template:
+    metadata:
+      labels:
+        app: debezium-server
+    spec:
+      containers:
+        - name: debezium-server
+          image: quay.io/debezium/server:2.7
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DEBEZIUM_SINK_TYPE
+              value: "redis"
+            - name: DEBEZIUM_SINK_REDIS_ADDRESS
+              value: "host.k3d.internal:6379"
+            - name: DEBEZIUM_SOURCE_CONNECTOR_CLASS
+              value: "io.debezium.connector.postgresql.PostgresConnector"
+            - name: DEBEZIUM_SOURCE_OFFSET_STORAGE_FILE_FILENAME
+              value: "/debezium/data/offsets.dat"
+            - name: DEBEZIUM_SOURCE_OFFSET_FLUSH_INTERVAL_MS
+              value: "0"
+            - name: DEBEZIUM_SOURCE_DATABASE_HOSTNAME
+              value: "postgres-svc.default.svc.cluster.local"
+            - name: DEBEZIUM_SOURCE_DATABASE_PORT
+              value: "5432"
+            - name: DEBEZIUM_SOURCE_DATABASE_USER
+              value: "postgres"
+            - name: DEBEZIUM_SOURCE_DATABASE_PASSWORD
+              value: "postgres"
+            - name: DEBEZIUM_SOURCE_DATABASE_DBNAME
+              value: "cdc_demo"
+            - name: DEBEZIUM_SOURCE_TOPIC_PREFIX
+              value: "cdc_demo"
+            - name: DEBEZIUM_SOURCE_TABLE_INCLUDE_LIST
+              value: "public.users,public.orders"
+            - name: DEBEZIUM_SOURCE_PLUGIN_NAME
+              value: "pgoutput"
+            - name: DEBEZIUM_SOURCE_DATABASE_SERVER_NAME
+              value: "cdc_demo"
+          volumeMounts:
+            - name: debezium-data
+              mountPath: /debezium/data
+      volumes:
+        - name: debezium-data
+          emptyDir: {}

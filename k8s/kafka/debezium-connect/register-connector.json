@@ -1,0 +1,17 @@
+{
+  "name": "cdc-postgres-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres-svc.default.svc.cluster.local",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "postgres",
+    "database.dbname": "cdc_demo",
+    "database.server.name": "cdc_demo",
+    "topic.prefix": "cdc_demo",
+    "table.include.list": "public.users,public.orders",
+    "plugin.name": "pgoutput",
+    "slot.name": "cdc_demo_slot",
+    "publication.name": "cdc_demo_publication"
+  }
+}

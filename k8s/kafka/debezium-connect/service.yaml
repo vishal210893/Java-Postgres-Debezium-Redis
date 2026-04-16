@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: debezium-connect-svc
+spec:
+  type: NodePort
+  selector:
+    app: debezium-connect
+  ports:
+    - port: 8083
+      targetPort: 8083
+      nodePort: 30083
