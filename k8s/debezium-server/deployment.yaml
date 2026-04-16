@@ -52,6 +52,10 @@ spec:
               value: "string"
             - name: DEBEZIUM_SOURCE_TIME_PRECISION_MODE
               value: "connect"
+            - name: DEBEZIUM_FORMAT_VALUE_SCHEMAS_ENABLE
+              value: "false"
+            - name: DEBEZIUM_FORMAT_KEY_SCHEMAS_ENABLE
+              value: "false"
           volumeMounts:
             - name: debezium-data
               mountPath: /debezium/data
