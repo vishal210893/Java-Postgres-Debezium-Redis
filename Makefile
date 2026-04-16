@@ -6,8 +6,8 @@
         kafka-install kafka-uninstall \
         debezium-kafka-install debezium-kafka-uninstall debezium-kafka-register \
         port-forward-postgres port-forward-redis port-forward-all port-forward-stop \
-        app-build app-run app-run-phase1 app-run-phase2 \
-        all-phase1 all-phase2 all-clean status
+        app-stop app-build app-run app-run-debezium-redis-sink app-run-debezium-kafka \
+        setup-debezium-redis-sink setup-debezium-kafka teardown status
 
 # ==================== Help ====================
 # Usage: make help
@@ -17,18 +17,19 @@ help: ## Show this help message
 	@echo "CDC Demo - Makefile Targets"
 	@echo "=========================="
 	@echo ""
-	@echo "Quick Start (Phase 1 - Debezium Redis Sink):"
-	@echo "  1. make all-phase1         # Create k3d cluster + deploy Redis, PostgreSQL, Debezium Server"
-	@echo "  2. make port-forward-all   # Expose PostgreSQL(5432) and Redis(6379) to localhost"
-	@echo "  3. DB_PASSWORD=postgres make app-run-phase1  # Start Spring Boot with debezium-redis-sink profile"
+	@echo "Quick Start (Debezium Redis Sink — direct WAL to Redis):"
+	@echo "  1. make setup-debezium-redis-sink       # Create k3d cluster + deploy Redis, PostgreSQL, Debezium Server"
+	@echo "  2. make port-forward-all                # Expose PostgreSQL(5432) and Redis(6379) to localhost"
+	@echo "  3. DB_PASSWORD=postgres make app-run-debezium-redis-sink  # Start Spring Boot app"
 	@echo ""
-	@echo "Quick Start (Phase 2 - Kafka pipeline, requires Phase 1 infra running):"
-	@echo "  1. make all-phase2         # Deploy Kafka + Debezium Kafka Connect on top of Phase 1"
-	@echo "  2. DB_PASSWORD=postgres make app-run-phase2  # Start Spring Boot with Kafka profile"
+	@echo "Quick Start (Debezium Kafka — WAL to Kafka to app):"
+	@echo "  1. make setup-debezium-kafka            # Create k3d cluster + deploy Redis, PostgreSQL, Kafka, Debezium Connect"
+	@echo "  2. make port-forward-all                # Expose PostgreSQL(5432) and Redis(6379) to localhost"
+	@echo "  3. DB_PASSWORD=postgres make app-run-debezium-kafka  # Start Spring Boot app"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make port-forward-stop     # Stop all port-forward processes"
-	@echo "  make all-clean             # Delete k3d cluster and all infrastructure"
+	@echo "  make teardown              # Delete k3d cluster and all infrastructure"
 	@echo ""
 	@echo "--- Individual Targets ---"
 	@echo ""
@@ -187,7 +188,12 @@ port-forward-stop: ## Kill all running kubectl port-forward processes
 # ==================== App ====================
 # Spring Boot application commands. The app runs on the host (not in k3d).
 # Requires port-forward-all to be running so it can reach PostgreSQL and Redis.
-# Set DB_PASSWORD=postgres before running (e.g., DB_PASSWORD=postgres make app-run-phase1).
+# Set DB_PASSWORD=postgres before running (e.g., DB_PASSWORD=postgres make app-run-debezium-redis-sink).
+
+app-stop: ## Stop Spring Boot app running on port 8082
+	-lsof -ti:8082 | xargs kill -9 2>/dev/null || true
+	-pkill -f "spring-boot:run" 2>/dev/null || true
+	@echo "App stopped"
 
 app-build: ## Build the Spring Boot app (Maven compile + checkstyle)
 	./mvnw clean compile
@@ -195,41 +201,43 @@ app-build: ## Build the Spring Boot app (Maven compile + checkstyle)
 app-run: ## Run Spring Boot app with default profile (no CDC consumer active)
 	./mvnw spring-boot:run
 
-app-run-phase1: ## Run Spring Boot app with 'debezium-redis-sink' profile (Redis Stream consumer)
+app-run-debezium-redis-sink: ## Run Spring Boot app with 'debezium-redis-sink' profile (Redis Stream consumer)
 	./mvnw spring-boot:run -Dspring-boot.run.profiles=debezium-redis-sink
 
-app-run-phase2: ## Run Spring Boot app with 'kafka' profile (Kafka consumer)
+app-run-debezium-kafka: ## Run Spring Boot app with 'kafka' profile (Kafka consumer)
 	./mvnw spring-boot:run -Dspring-boot.run.profiles=kafka
 
-# ==================== Combo ====================
-# One-command setup for each CDC phase. These chain individual targets together.
+# ==================== Setup ====================
+# One-command setup for each CDC pipeline. These chain individual targets together.
+# Each setup is fully self-contained — no need to run one before the other.
 
-all-phase1: cluster-create redis-install postgres-install debezium-install ## Set up EVERYTHING for Phase 1: k3d + Redis + PostgreSQL + Debezium Server
+setup-debezium-redis-sink: cluster-create redis-install postgres-install debezium-install ## Set up Debezium Redis Sink: k3d + Redis + PostgreSQL + Debezium Server
 	@echo ""
 	@echo "=============================================="
-	@echo "  Phase 1 infrastructure ready!"
+	@echo "  Debezium Redis Sink infrastructure ready!"
 	@echo "  (Redis + PostgreSQL + Debezium Server)"
 	@echo "=============================================="
 	@echo ""
 	@echo "Next steps:"
 	@echo "  1. Run: make port-forward-all"
-	@echo "  2. Run: DB_PASSWORD=postgres make app-run-phase1"
+	@echo "  2. Run: DB_PASSWORD=postgres make app-run-debezium-redis-sink"
 	@echo "  3. Open: http://localhost:8082/swagger-ui.html"
 	@echo ""
 
-all-phase2: kafka-install debezium-kafka-install ## Add Phase 2 on top of Phase 1: deploy Kafka + Debezium Kafka Connect
+setup-debezium-kafka: cluster-create redis-install postgres-install kafka-install debezium-kafka-install ## Set up Debezium Kafka: k3d + Redis + PostgreSQL + Kafka + Debezium Connect
 	@echo ""
 	@echo "=============================================="
-	@echo "  Phase 2 infrastructure ready!"
-	@echo "  (Kafka + Debezium Connect added)"
+	@echo "  Debezium Kafka infrastructure ready!"
+	@echo "  (Redis + PostgreSQL + Kafka + Debezium Connect)"
 	@echo "=============================================="
 	@echo ""
 	@echo "Next steps:"
-	@echo "  1. Ensure port-forwards are running: make port-forward-all"
-	@echo "  2. Run: DB_PASSWORD=postgres make app-run-phase2"
+	@echo "  1. Run: make port-forward-all"
+	@echo "  2. Run: DB_PASSWORD=postgres make app-run-debezium-kafka"
+	@echo "  3. Open: http://localhost:8082/swagger-ui.html"
 	@echo ""
 
-all-clean: cluster-delete ## Tear down EVERYTHING: delete k3d cluster and all resources
+teardown: cluster-delete ## Tear down EVERYTHING: delete k3d cluster and all resources
 	@echo "All infrastructure cleaned up"
 
 # ==================== Status ====================

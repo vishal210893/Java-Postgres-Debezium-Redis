@@ -12,6 +12,12 @@
     "table.include.list": "public.users,public.orders",
     "plugin.name": "pgoutput",
     "slot.name": "cdc_demo_slot",
-    "publication.name": "cdc_demo_publication"
+    "publication.name": "cdc_demo_publication",
+    "decimal.handling.mode": "string",
+    "time.precision.mode": "connect",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false"
   }
 }

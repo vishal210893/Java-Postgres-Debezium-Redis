@@ -207,13 +207,13 @@ debezium-kafka-uninstall
 # App
 app-build                   # ./mvnw clean compile
 app-run                     # ./mvnw spring-boot:run
-app-run-phase1              # spring.profiles.active=debezium-server
-app-run-phase2              # spring.profiles.active=kafka
+app-run-debezium-redis-sink # spring.profiles.active=debezium-redis-sink
+app-run-debezium-kafka      # spring.profiles.active=kafka
 
-# Combo
-all-phase1                  # cluster-create + postgres-image + postgres-image-load + postgres-install + debezium-install
-all-phase2                  # kafka-install + debezium-kafka-install
-all-clean                   # cluster-delete
+# Setup
+setup-debezium-redis-sink   # cluster-create + redis-install + postgres-install + debezium-install
+setup-debezium-kafka        # cluster-create + redis-install + postgres-install + kafka-install + debezium-kafka-install
+teardown                    # cluster-delete
 ```
 
 ## Project Structure

@@ -7,4 +7,4 @@ app:
 
 spring:
   kafka:
-    bootstrap-servers: localhost:30094
+    bootstrap-servers: 127.0.0.1:30094

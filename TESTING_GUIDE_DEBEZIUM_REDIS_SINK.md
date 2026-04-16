@@ -64,7 +64,7 @@
 
 ```bash
 # Create k3d cluster + deploy Redis, PostgreSQL, Debezium Server
-make all-phase1
+make setup-debezium-redis-sink
 ```
 
 This runs:
@@ -132,7 +132,7 @@ In a **third terminal**:
 
 ```bash
 export DB_PASSWORD=postgres
-mvn spring-boot:run -Dspring-boot.run.profiles=debezium-redis-sink
+./mvnw spring-boot:run -Dspring-boot.run.profiles=debezium-redis-sink
 ```
 
 ### Option B: From IntelliJ IDEA
@@ -160,7 +160,19 @@ Expected: `"status":"UP"` with `db: UP` and `redis: UP`.
 curl http://localhost:8082/api/health/cdc
 ```
 
-Expected: `"cdcMode":"debezium-redis-sink"`. If it shows `"cdcMode":"none"`, the profile is not set.
+Expected:
+
+```json
+{
+  "success": true,
+  "data": {
+    "cdcMode": "debezium-redis-sink",
+    "redis": "UP"
+  }
+}
+```
+
+If it shows `"cdcMode":"none"`, the profile is not set.
 
 **Swagger UI:** Open http://localhost:8082/swagger-ui.html
 
@@ -430,5 +442,5 @@ make port-forward-all
 make port-forward-stop
 
 # Delete everything
-make all-clean
+make teardown
 ```
